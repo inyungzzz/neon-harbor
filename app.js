@@ -1,9 +1,9 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
   {
-    title: '失聯的訊號', type: '情報蒐集', duration: '約 5 分鐘', place: '港區 · 舊電車站',
+    title: '失聯的訊號', type: '情報蒐集', duration: '約 5 分鐘', place: '港區 · 舊電車站', destination: [6, 0],
     description: '修車師傅阿哲的貨車停在舊電車站附近，車上的一袋零件不見了。他想知道發生了什麼，並願意付你一筆跑腿費。',
     choices: [
       { title: '先問附近店家', detail: '低風險 · 阿哲信任 +2', cash: 650, fame: 5, heat: 0, relationship: 'zhe', bond: 2, result: '和平解決。店家記得一輛可疑的廂型車，線索讓阿哲找回了零件。' },
@@ -11,7 +11,7 @@ const missions = [
     ],
   },
   {
-    title: '末班車之後', type: '街區委託', duration: '約 4 分鐘', place: '港區 · 公車總站',
+    title: '末班車之後', type: '街區委託', duration: '約 4 分鐘', place: '港區 · 公車總站', destination: [0, 2],
     description: '夜班花店店員小葵錯過末班公車，還得把一批花送到河岸市集。你可以陪她走安全的主街，或騎車抄近路趕在花況變差前送達。',
     choices: [
       { title: '沿主街慢慢送達', detail: '低風險 · 小葵信任 +2', cash: 420, fame: 4, heat: 0, relationship: 'kui', bond: 2, result: '你們沿著明亮的主街準時抵達。小葵把你的名字介紹給河岸市集的攤商。' },
@@ -19,7 +19,7 @@ const missions = [
     ],
   },
   {
-    title: '天橋下的節奏', type: '計時挑戰', duration: '約 3 分鐘', place: '自由港區 · 高架橋下',
+    title: '天橋下的節奏', type: '計時挑戰', duration: '約 3 分鐘', place: '自由港區 · 高架橋下', destination: [6, 2],
     description: '阿哲邀你參加一場合法封路時段的街區計時賽。路線穿過高架橋與倉庫街，選擇穩定跑完或挑戰更快的路線，會帶來不同名聲。',
     choices: [
       { title: '穩定完成賽道', detail: '安全完賽 · 阿哲信任 +1', cash: 500, fame: 5, heat: 0, relationship: 'zhe', bond: 1, result: '你穩定跑完全程，車庫老闆稱讚你的判斷，並留下了聯絡方式。' },
@@ -90,7 +90,8 @@ function renderMission() {
   $('mission-description').textContent = state.completed ? '委託已完成。你的選擇已記錄在行動檔案中。' : mission.description;
   $('reward').innerHTML = state.completed ? '任務完成 <i>＋狀態已更新</i>' : mission.choices.map((choice) => `$${choice.cash}`).join(' / ') + ' <i>＋名聲</i>';
   $('choices').innerHTML = mission.choices.map((choice, index) => `<button class="choice" data-choice="${index}"><span class="choice-key">${String.fromCharCode(65 + index)}</span><span><b>${choice.title}</b><small>${choice.detail}</small></span><span class="choice-arrow">↗</span></button>`).join('');
-  $('choices').hidden = state.completed;
+  $('choices').hidden = state.completed || !state.missionAccepted;
+  $('mission-locked').hidden = state.completed || state.missionAccepted;
   $('result').hidden = !state.completed;
   $('result').textContent = state.completed ? state.missionResult || '委託已完成。' : '';
   $('next-mission').hidden = !state.completed || state.missionIndex >= missions.length - 1;
@@ -108,11 +109,15 @@ function renderMap() {
   $('vehicle-status').textContent = state.inCar ? `🚘 駕駛中 · 每次移動 ${state.vehicleUpgrade ? 3 : 2} 格` : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
   $('vehicle-toggle').textContent = state.inCar ? '下車（E）' : nearbyCar ? '上車（E）' : '附近沒有車';
   $('vehicle-toggle').disabled = !state.inCar && !nearbyCar;
-  const atDestination = state.mapX === 6 && state.mapY === 0;
-  $('position-label').textContent = atDestination ? '舊電車站' : state.mapX > 3 ? '自由港區' : '港區入口';
-  $('walk-hint').textContent = state.lastDiscovery || (atDestination ? '你到達委託地點了。按 Enter 或點下方按鈕查看委託。' : state.inCar ? '駕駛中移動更快；沿路留意發光的港灣印記。' : '用方向鍵或 WASD 移動，沿路留意發光的港灣印記。');
+  const destination = missions[state.missionIndex].destination;
+  const atDestination = state.mapX === destination[0] && state.mapY === destination[1];
+  const marker = q('.mission-pin');
+  marker.style.left = `${6 + destination[0] * 13}%`; marker.style.top = `${8 + destination[1] * 18}%`; marker.style.right = 'auto';
+  $('position-label').textContent = atDestination ? missions[state.missionIndex].place.split(' · ').pop() : state.mapX > 3 ? '自由港區' : '港區入口';
+  $('walk-hint').textContent = state.lastDiscovery || (atDestination ? state.missionAccepted ? '委託已接取，選擇一種處理方式。' : '你到達委託地點了。按 Enter 接取委託。' : state.inCar ? '駕駛中移動更快；沿路留意發光的港灣印記。' : '用方向鍵或 WASD 移動，沿路留意發光的港灣印記。');
   state.lastDiscovery = '';
-  $('interact').hidden = !atDestination;
+  $('interact').hidden = !atDestination || state.completed;
+  $('interact').innerHTML = `${state.missionAccepted ? '查看委託' : '接取委託'} <span>Enter</span>`;
 }
 function move(direction) {
   const delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[direction];
@@ -135,7 +140,12 @@ function collectAt(x, y) {
   state.cash += 150; state.fame = Math.min(100, state.fame + 2);
   state.lastDiscovery = '找到港灣印記！獲得 $150 與 2 點名聲。';
 }
-function openMission() { $('missions').scrollIntoView({ behavior: 'smooth' }); }
+function openMission() {
+  const destination = missions[state.missionIndex].destination;
+  if (state.mapX !== destination[0] || state.mapY !== destination[1] || state.completed) return;
+  if (!state.missionAccepted) { state.missionAccepted = true; save(); renderMission(); renderMap(); }
+  $('missions').scrollIntoView({ behavior: 'smooth' });
+}
 function toggleVehicle() {
   const nearbyCar = Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1;
   if (state.inCar) state.inCar = false; else if (nearbyCar) state.inCar = true;
@@ -178,7 +188,7 @@ function choose(index) {
 }
 function nextMission() {
   if (!state.completed || state.missionIndex >= missions.length - 1) return;
-  state.missionIndex += 1; state.completed = false; state.missionResult = '';
+  state.missionIndex += 1; state.completed = false; state.missionAccepted = false; state.missionResult = '';
   save(); render();
 }
 document.querySelectorAll('.move-btn').forEach((button) => button.addEventListener('click', () => move(button.dataset.move)));
@@ -196,7 +206,7 @@ window.addEventListener('keydown', (event) => {
   const keyMap = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
   if (keyMap[event.key]) { event.preventDefault(); move(keyMap[event.key]); }
   else if ((event.key === 'e' || event.key === 'E') && (state.inCar || Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1)) toggleVehicle();
-  else if (event.key === 'Enter' && state.mapX === 6 && state.mapY === 0) openMission();
+  else if (event.key === 'Enter') openMission();
 });
 $('reset').addEventListener('click', () => { state = { ...initialState, collectibles: [] }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
 render();
