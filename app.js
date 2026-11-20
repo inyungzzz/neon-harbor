@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 } };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -31,16 +31,26 @@ function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
     const relationships = saved.relationships || {};
-    return { ...initialState, ...saved, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)) };
+    return { ...initialState, ...saved, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
   } catch { return { ...initialState }; }
 }
 let state = readState();
 const $ = (id) => document.getElementById(id);
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
 function render() {
+  renderClock();
   renderStats(); renderConnections();
   renderMap(); renderMission(); renderActivity(); renderGarage();
 }
+function renderClock() {
+  const hour = Math.floor(state.gameMinutes / 60);
+  const minute = state.gameMinutes % 60;
+  const isDay = hour >= 6 && hour < 18;
+  $('game-time').textContent = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  $('time-period').textContent = isDay ? '白晝' : '夜間';
+  document.body.dataset.period = isDay ? 'day' : 'night';
+}
+function advanceTime(minutes) { state.gameMinutes = (state.gameMinutes + minutes) % 1440; }
 function renderStats() {
   $('cash').textContent = `$${state.cash.toLocaleString('en-US')}`;
   $('fame').innerHTML = `${state.fame} <small>/ 100</small>`;
@@ -113,6 +123,8 @@ function move(direction) {
     state.mapY = Math.max(0, Math.min(4, state.mapY + delta[1]));
     collectAt(state.mapX, state.mapY);
   }
+  advanceTime(speed * 5);
+  renderClock();
   renderStats(); renderMap(); save();
 }
 function collectAt(x, y) {
@@ -147,7 +159,7 @@ function finishActivity(route) {
     state.cash += 500; state.fame = Math.min(100, state.fame + 3); state.heat = Math.min(5, state.heat + 1);
     $('activity-status').textContent = '你從捷徑搶下最佳時間，拿到 $500 獎金與 3 點名聲；警方熱度增加 1 級。';
   }
-  state.activityRuns += 1; state.activityActive = false; save(); render();
+  state.activityRuns += 1; state.activityActive = false; advanceTime(15); save(); render();
 }
 function upgradeVehicle() {
   const cost = state.relationships.zhe >= 2 ? 600 : 900;
@@ -161,6 +173,7 @@ function choose(index) {
   if (!choice) return;
   state.completed = true; state.cash += choice.cash; state.fame = Math.min(100, state.fame + choice.fame); state.heat = Math.min(5, state.heat + choice.heat); state.missionResult = choice.result;
   if (choice.relationship && choice.bond) state.relationships[choice.relationship] = Math.min(3, state.relationships[choice.relationship] + choice.bond);
+  advanceTime(60);
   save(); render();
 }
 function nextMission() {
