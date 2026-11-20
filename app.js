@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, activityRuns: 0, activityActive: false, collectibles: [] };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [] };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -37,13 +37,22 @@ let state = readState();
 const $ = (id) => document.getElementById(id);
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
 function render() {
+  renderStats();
+  renderMap(); renderMission(); renderActivity(); renderGarage();
+}
+function renderStats() {
   $('cash').textContent = `$${state.cash.toLocaleString('en-US')}`;
   $('fame').innerHTML = `${state.fame} <small>/ 100</small>`;
   $('heat').textContent = state.heat === 0 ? '低調' : state.heat < 3 ? '有人注意' : '警方關注';
   $('wanted-stars').textContent = `${'★'.repeat(state.heat)}${'☆'.repeat(5 - state.heat)}`;
   $('cool-down').hidden = state.heat === 0;
   $('collectible-count').textContent = `港灣印記 ✦ ${state.collectibles.length} / 3`;
-  renderMap(); renderMission(); renderActivity();
+}
+function renderGarage() {
+  const installed = Boolean(state.vehicleUpgrade);
+  $('garage-status').textContent = installed ? '引擎調校已安裝，駕駛時每次可移動 3 格。' : '花費 $900 調整車輛，駕駛時每次可多移動一格。';
+  $('upgrade-vehicle').textContent = installed ? '已安裝 ✓' : '安裝調校 · $900';
+  $('upgrade-vehicle').disabled = installed || state.cash < 900;
 }
 function renderActivity() {
   $('activity-count').textContent = `已完成 ${state.activityRuns} 次`;
@@ -75,7 +84,7 @@ function renderMap() {
   const nearbyCar = Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1;
   $('parked-car').hidden = state.inCar || !nearbyCar;
   [0, 1, 2].forEach((id) => { $(`collectible-${id}`).hidden = state.collectibles.includes(id); });
-  $('vehicle-status').textContent = state.inCar ? '🚘 駕駛中 · 車速較快' : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
+  $('vehicle-status').textContent = state.inCar ? `🚘 駕駛中 · 每次移動 ${state.vehicleUpgrade ? 3 : 2} 格` : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
   $('vehicle-toggle').textContent = state.inCar ? '下車（E）' : nearbyCar ? '上車（E）' : '附近沒有車';
   $('vehicle-toggle').disabled = !state.inCar && !nearbyCar;
   const atDestination = state.mapX === 6 && state.mapY === 0;
@@ -87,13 +96,13 @@ function renderMap() {
 function move(direction) {
   const delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[direction];
   if (!delta) return;
-  const speed = state.inCar ? 2 : 1;
+  const speed = state.inCar ? (state.vehicleUpgrade ? 3 : 2) : 1;
   for (let step = 0; step < speed; step += 1) {
     state.mapX = Math.max(0, Math.min(6, state.mapX + delta[0]));
     state.mapY = Math.max(0, Math.min(4, state.mapY + delta[1]));
     collectAt(state.mapX, state.mapY);
   }
-  renderMap(); save();
+  renderStats(); renderMap(); save();
 }
 function collectAt(x, y) {
   const spots = [[2, 2], [5, 3], [4, 0]];
@@ -128,6 +137,11 @@ function finishActivity(route) {
   }
   state.activityRuns += 1; state.activityActive = false; save(); render();
 }
+function upgradeVehicle() {
+  if (state.vehicleUpgrade || state.cash < 900) return;
+  state.cash -= 900; state.vehicleUpgrade = true;
+  save(); render();
+}
 function choose(index) {
   if (state.completed) return;
   const choice = missions[state.missionIndex].choices[index];
@@ -148,6 +162,7 @@ $('cool-down').addEventListener('click', coolDown);
 $('next-mission').addEventListener('click', nextMission);
 $('activity-start').addEventListener('click', startActivity);
 $('activity-choices').addEventListener('click', (event) => { const button = event.target.closest('.activity-choice'); if (button) finishActivity(button.dataset.ride); });
+$('upgrade-vehicle').addEventListener('click', upgradeVehicle);
 window.addEventListener('keydown', (event) => {
   const activeTag = document.activeElement?.tagName;
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
