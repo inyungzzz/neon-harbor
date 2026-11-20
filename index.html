@@ -68,11 +68,11 @@
     </section>
 
     <section class="missions" id="missions">
-      <div class="section-heading"><div><p class="eyebrow">今晚的機會</p><h2>可接委託</h2></div><span class="mission-count">01 / 03</span></div>
+      <div class="section-heading"><div><p class="eyebrow">今晚的機會</p><h2>可接委託</h2></div><span class="mission-count" id="mission-count">01 / 03</span></div>
       <article class="mission-card" id="mission-card">
         <div class="mission-visual"><span class="tag">新委託</span><div class="signal">〰</div><span class="visual-caption">港區 · 舊電車站</span></div>
         <div class="mission-content">
-          <div class="mission-meta"><span>情報蒐集</span><span>約 5 分鐘</span></div>
+          <div class="mission-meta"><span id="mission-type">情報蒐集</span><span id="mission-duration">約 5 分鐘</span></div>
           <h3 id="mission-title">失聯的訊號</h3>
           <p id="mission-description">修車師傅阿哲的貨車停在舊電車站附近，車上的一袋零件不見了。他想知道發生了什麼，並願意付你一筆跑腿費。</p>
           <div class="mission-reward"><span>預估報酬</span><strong id="reward">$650 <i>＋名聲</i></strong></div>
@@ -81,6 +81,7 @@
             <button class="choice" data-choice="sneak"><span class="choice-key">B</span><span><b>夜裡回現場查看</b><small>中風險 · 可能發現更多</small></span><span class="choice-arrow">↗</span></button>
           </div>
           <div class="result" id="result" role="status" aria-live="polite" hidden></div>
+          <button class="next-mission" id="next-mission" type="button" hidden>接下個委託 <span>→</span></button>
         </div>
       </article>
       <div class="locked-missions"><span>▰</span> 完成第一份委託，解鎖更多城市故事</div>
