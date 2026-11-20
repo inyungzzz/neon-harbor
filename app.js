@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [] };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 } };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -6,38 +6,39 @@ const missions = [
     title: '失聯的訊號', type: '情報蒐集', duration: '約 5 分鐘', place: '港區 · 舊電車站',
     description: '修車師傅阿哲的貨車停在舊電車站附近，車上的一袋零件不見了。他想知道發生了什麼，並願意付你一筆跑腿費。',
     choices: [
-      { title: '先問附近店家', detail: '低風險 · 可能找到線索', cash: 650, fame: 5, heat: 0, result: '和平解決。店家記得一輛可疑的廂型車，線索讓阿哲找回了零件。' },
-      { title: '夜裡回現場查看', detail: '中風險 · 可能發現更多', cash: 800, fame: 8, heat: 1, result: '找到貨物了。你在站內發現遺失零件，也引起巡邏人員注意。' },
+      { title: '先問附近店家', detail: '低風險 · 阿哲信任 +2', cash: 650, fame: 5, heat: 0, relationship: 'zhe', bond: 2, result: '和平解決。店家記得一輛可疑的廂型車，線索讓阿哲找回了零件。' },
+      { title: '夜裡回現場查看', detail: '中風險 · 報酬較高', cash: 800, fame: 8, heat: 1, relationship: 'zhe', bond: 0, result: '找到貨物了。你在站內發現遺失零件，也引起巡邏人員注意。' },
     ],
   },
   {
     title: '末班車之後', type: '街區委託', duration: '約 4 分鐘', place: '港區 · 公車總站',
     description: '夜班花店店員小葵錯過末班公車，還得把一批花送到河岸市集。你可以陪她走安全的主街，或騎車抄近路趕在花況變差前送達。',
     choices: [
-      { title: '沿主街慢慢送達', detail: '低風險 · 收穫鄰里信任', cash: 420, fame: 4, heat: 0, result: '你們沿著明亮的主街準時抵達。小葵把你的名字介紹給河岸市集的攤商。' },
-      { title: '騎車走河岸捷徑', detail: '較高報酬 · 警方熱度 +1', cash: 700, fame: 6, heat: 1, result: '花束保住了新鮮度，但你在河岸路段被巡邏車記下車牌。' },
+      { title: '沿主街慢慢送達', detail: '低風險 · 小葵信任 +2', cash: 420, fame: 4, heat: 0, relationship: 'kui', bond: 2, result: '你們沿著明亮的主街準時抵達。小葵把你的名字介紹給河岸市集的攤商。' },
+      { title: '騎車走河岸捷徑', detail: '較高報酬 · 小葵信任 +1、熱度 +1', cash: 700, fame: 6, heat: 1, relationship: 'kui', bond: 1, result: '花束保住了新鮮度，但你在河岸路段被巡邏車記下車牌。' },
     ],
   },
   {
     title: '天橋下的節奏', type: '計時挑戰', duration: '約 3 分鐘', place: '自由港區 · 高架橋下',
     description: '阿哲邀你參加一場合法封路時段的街區計時賽。路線穿過高架橋與倉庫街，選擇穩定跑完或挑戰更快的路線，會帶來不同名聲。',
     choices: [
-      { title: '穩定完成賽道', detail: '安全完賽 · 名聲 +5', cash: 500, fame: 5, heat: 0, result: '你穩定跑完全程，車庫老闆稱讚你的判斷，並留下了聯絡方式。' },
-      { title: '挑戰極限路線', detail: '高報酬 · 警方熱度 +2', cash: 950, fame: 9, heat: 2, result: '你刷新了當晚紀錄，但高架橋附近的巡邏隊也注意到了這場賽事。' },
+      { title: '穩定完成賽道', detail: '安全完賽 · 阿哲信任 +1', cash: 500, fame: 5, heat: 0, relationship: 'zhe', bond: 1, result: '你穩定跑完全程，車庫老闆稱讚你的判斷，並留下了聯絡方式。' },
+      { title: '挑戰極限路線', detail: '高報酬 · 警方熱度 +2', cash: 950, fame: 9, heat: 2, relationship: 'kui', bond: 1, result: '你刷新了當晚紀錄，但高架橋附近的巡邏隊也注意到了這場賽事。' },
     ],
   },
 ];
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    return { ...initialState, ...saved, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)) };
+    const relationships = saved.relationships || {};
+    return { ...initialState, ...saved, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)) };
   } catch { return { ...initialState }; }
 }
 let state = readState();
 const $ = (id) => document.getElementById(id);
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
 function render() {
-  renderStats();
+  renderStats(); renderConnections();
   renderMap(); renderMission(); renderActivity(); renderGarage();
 }
 function renderStats() {
@@ -50,14 +51,24 @@ function renderStats() {
 }
 function renderGarage() {
   const installed = Boolean(state.vehicleUpgrade);
-  $('garage-status').textContent = installed ? '引擎調校已安裝，駕駛時每次可移動 3 格。' : '花費 $900 調整車輛，駕駛時每次可多移動一格。';
-  $('upgrade-vehicle').textContent = installed ? '已安裝 ✓' : '安裝調校 · $900';
-  $('upgrade-vehicle').disabled = installed || state.cash < 900;
+  const cost = state.relationships.zhe >= 2 ? 600 : 900;
+  $('garage-status').textContent = installed ? '引擎調校已安裝，駕駛時每次可移動 3 格。' : `花費 $${cost} 調整車輛，駕駛時每次可多移動一格。`;
+  $('upgrade-vehicle').textContent = installed ? '已安裝 ✓' : `安裝調校 · $${cost}`;
+  $('upgrade-vehicle').disabled = installed || state.cash < cost;
+}
+function renderConnections() {
+  for (const name of ['zhe', 'kui']) {
+    const trust = state.relationships[name];
+    $(`${name}-trust`).textContent = `${trust} / 3`;
+    $(`${name}-meter`).style.width = `${Math.round(trust / 3 * 100)}%`;
+    $(`${name}-perk`).textContent = trust >= 2 ? (name === 'zhe' ? '已解鎖：引擎調校優惠 $600' : '已解鎖：兜風挑戰免報名費') : `信任達 2 點：${name === 'zhe' ? '引擎調校優惠' : '兜風挑戰免報名費'}`;
+  }
 }
 function renderActivity() {
+  const fee = state.relationships.kui >= 2 ? 0 : 100;
   $('activity-count').textContent = `已完成 ${state.activityRuns} 次`;
   $('activity-start').disabled = state.activityActive;
-  $('activity-start').textContent = state.activityActive ? '挑選路線中…' : state.activityRuns ? '再玩一次（$100）' : '開始挑戰（$100）';
+  $('activity-start').textContent = state.activityActive ? '挑選路線中…' : `${state.activityRuns ? '再玩一次' : '開始挑戰'}（${fee ? '$100' : '免費'}）`;
   $('activity-choices').hidden = !state.activityActive;
 }
 function renderMission() {
@@ -121,9 +132,10 @@ function toggleVehicle() {
 function coolDown() { if (state.heat > 0) state.heat -= 1; save(); render(); }
 function startActivity() {
   if (state.activityActive) return;
-  if (state.cash < 100) { $('activity-status').textContent = '現金不足，至少需要 $100 報名費。'; return; }
-  state.cash -= 100; state.activityActive = true;
-  $('activity-status').textContent = '路線已準備好，選擇一種方式完成挑戰。';
+  const fee = state.relationships.kui >= 2 ? 0 : 100;
+  if (state.cash < fee) { $('activity-status').textContent = '現金不足，至少需要 $100 報名費。'; return; }
+  state.cash -= fee; state.activityActive = true;
+  $('activity-status').textContent = fee ? '路線已準備好，選擇一種方式完成挑戰。' : '小葵幫你免除報名費，選擇一種方式完成挑戰。';
   save(); render();
 }
 function finishActivity(route) {
@@ -138,8 +150,9 @@ function finishActivity(route) {
   state.activityRuns += 1; state.activityActive = false; save(); render();
 }
 function upgradeVehicle() {
-  if (state.vehicleUpgrade || state.cash < 900) return;
-  state.cash -= 900; state.vehicleUpgrade = true;
+  const cost = state.relationships.zhe >= 2 ? 600 : 900;
+  if (state.vehicleUpgrade || state.cash < cost) return;
+  state.cash -= cost; state.vehicleUpgrade = true;
   save(); render();
 }
 function choose(index) {
@@ -147,6 +160,7 @@ function choose(index) {
   const choice = missions[state.missionIndex].choices[index];
   if (!choice) return;
   state.completed = true; state.cash += choice.cash; state.fame = Math.min(100, state.fame + choice.fame); state.heat = Math.min(5, state.heat + choice.heat); state.missionResult = choice.result;
+  if (choice.relationship && choice.bond) state.relationships[choice.relationship] = Math.min(3, state.relationships[choice.relationship] + choice.bond);
   save(); render();
 }
 function nextMission() {
