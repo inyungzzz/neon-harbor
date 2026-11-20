@@ -33,7 +33,11 @@
 
 ## 路線圖與目前狀態
 
-**目前狀態：第一版靜態 Web 原型與 GitHub Pages 工作流程已在本機完成；GitHub 遠端儲存庫尚未建立，尚未推送或發布。**
+**目前狀態：第一版靜態 Web 原型已發布至 GitHub Pages，後續推送到 `main` 會由 GitHub Actions 自動部署。**
+
+- GitHub 專案：<https://github.com/inyungzzz/neon-harbor>
+- 線上網站：<https://inyungzzz.github.io/neon-harbor/>
+- 部署工作流程：<https://github.com/inyungzzz/neon-harbor/actions>
 
 ### 已完成
 
@@ -61,9 +65,9 @@
 - [x] 加入方向鍵／WASD 移動與畫面方向按鈕。
 - [x] 加入 E 鍵車輛操作、駕駛移動速度及警方熱度控制。
 - [x] 撰寫專案 README 與本機預覽／GitHub 部署說明。
-- [ ] 建立 GitHub 遠端儲存庫並推送本機專案。
-- [ ] 在 GitHub 專案設定中啟用 GitHub Actions 作為 Pages 發布來源。
-- [ ] 確認 Actions 部署成功並取得 Pages 網站網址。
+- [x] 建立 GitHub 公開儲存庫並推送本機專案。
+- [x] 啟用 GitHub Actions 作為 Pages 發布來源。
+- [x] 確認 Actions 部署成功並確認 Pages 網址可正常回應。
 
 ## 範圍原則
 
