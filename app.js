@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, activityRuns: 0, activityActive: false };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -42,7 +42,13 @@ function render() {
   $('heat').textContent = state.heat === 0 ? '低調' : state.heat < 3 ? '有人注意' : '警方關注';
   $('wanted-stars').textContent = `${'★'.repeat(state.heat)}${'☆'.repeat(5 - state.heat)}`;
   $('cool-down').hidden = state.heat === 0;
-  renderMap(); renderMission();
+  renderMap(); renderMission(); renderActivity();
+}
+function renderActivity() {
+  $('activity-count').textContent = `已完成 ${state.activityRuns} 次`;
+  $('activity-start').disabled = state.activityActive;
+  $('activity-start').textContent = state.activityActive ? '挑選路線中…' : state.activityRuns ? '再玩一次（$100）' : '開始挑戰（$100）';
+  $('activity-choices').hidden = !state.activityActive;
 }
 function renderMission() {
   const mission = missions[state.missionIndex];
@@ -90,6 +96,24 @@ function toggleVehicle() {
   save(); renderMap();
 }
 function coolDown() { if (state.heat > 0) state.heat -= 1; save(); render(); }
+function startActivity() {
+  if (state.activityActive) return;
+  if (state.cash < 100) { $('activity-status').textContent = '現金不足，至少需要 $100 報名費。'; return; }
+  state.cash -= 100; state.activityActive = true;
+  $('activity-status').textContent = '路線已準備好，選擇一種方式完成挑戰。';
+  save(); render();
+}
+function finishActivity(route) {
+  if (!state.activityActive) return;
+  if (route === 'steady') {
+    state.cash += 260; state.fame = Math.min(100, state.fame + 2);
+    $('activity-status').textContent = '你穩定完成一圈，拿到 $260 獎金與 2 點名聲。';
+  } else {
+    state.cash += 500; state.fame = Math.min(100, state.fame + 3); state.heat = Math.min(5, state.heat + 1);
+    $('activity-status').textContent = '你從捷徑搶下最佳時間，拿到 $500 獎金與 3 點名聲；警方熱度增加 1 級。';
+  }
+  state.activityRuns += 1; state.activityActive = false; save(); render();
+}
 function choose(index) {
   if (state.completed) return;
   const choice = missions[state.missionIndex].choices[index];
@@ -108,6 +132,8 @@ $('interact').addEventListener('click', openMission);
 $('vehicle-toggle').addEventListener('click', toggleVehicle);
 $('cool-down').addEventListener('click', coolDown);
 $('next-mission').addEventListener('click', nextMission);
+$('activity-start').addEventListener('click', startActivity);
+$('activity-choices').addEventListener('click', (event) => { const button = event.target.closest('.activity-choice'); if (button) finishActivity(button.dataset.ride); });
 window.addEventListener('keydown', (event) => {
   const activeTag = document.activeElement?.tagName;
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
