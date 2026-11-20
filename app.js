@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, activityRuns: 0, activityActive: false };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, activityRuns: 0, activityActive: false, collectibles: [] };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -30,7 +30,7 @@ const missions = [
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    return { ...initialState, ...saved, missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)) };
+    return { ...initialState, ...saved, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)) };
   } catch { return { ...initialState }; }
 }
 let state = readState();
@@ -42,6 +42,7 @@ function render() {
   $('heat').textContent = state.heat === 0 ? '低調' : state.heat < 3 ? '有人注意' : '警方關注';
   $('wanted-stars').textContent = `${'★'.repeat(state.heat)}${'☆'.repeat(5 - state.heat)}`;
   $('cool-down').hidden = state.heat === 0;
+  $('collectible-count').textContent = `港灣印記 ✦ ${state.collectibles.length} / 3`;
   renderMap(); renderMission(); renderActivity();
 }
 function renderActivity() {
@@ -73,21 +74,34 @@ function renderMap() {
   player.textContent = state.inCar ? '🚘' : '●'; player.classList.toggle('in-car', state.inCar);
   const nearbyCar = Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1;
   $('parked-car').hidden = state.inCar || !nearbyCar;
+  [0, 1, 2].forEach((id) => { $(`collectible-${id}`).hidden = state.collectibles.includes(id); });
   $('vehicle-status').textContent = state.inCar ? '🚘 駕駛中 · 車速較快' : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
   $('vehicle-toggle').textContent = state.inCar ? '下車（E）' : nearbyCar ? '上車（E）' : '附近沒有車';
   $('vehicle-toggle').disabled = !state.inCar && !nearbyCar;
   const atDestination = state.mapX === 6 && state.mapY === 0;
   $('position-label').textContent = atDestination ? '舊電車站' : state.mapX > 3 ? '自由港區' : '港區入口';
-  $('walk-hint').textContent = atDestination ? '你到達委託地點了。按 Enter 或點下方按鈕查看委託。' : state.inCar ? '駕駛中移動更快；到達委託點後按 Enter 查看任務。' : '用方向鍵或 WASD 移動，走到右上角的委託點。';
+  $('walk-hint').textContent = state.lastDiscovery || (atDestination ? '你到達委託地點了。按 Enter 或點下方按鈕查看委託。' : state.inCar ? '駕駛中移動更快；沿路留意發光的港灣印記。' : '用方向鍵或 WASD 移動，沿路留意發光的港灣印記。');
+  state.lastDiscovery = '';
   $('interact').hidden = !atDestination;
 }
 function move(direction) {
   const delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[direction];
   if (!delta) return;
   const speed = state.inCar ? 2 : 1;
-  state.mapX = Math.max(0, Math.min(6, state.mapX + delta[0] * speed));
-  state.mapY = Math.max(0, Math.min(4, state.mapY + delta[1] * speed));
-  save(); renderMap();
+  for (let step = 0; step < speed; step += 1) {
+    state.mapX = Math.max(0, Math.min(6, state.mapX + delta[0]));
+    state.mapY = Math.max(0, Math.min(4, state.mapY + delta[1]));
+    collectAt(state.mapX, state.mapY);
+  }
+  renderMap(); save();
+}
+function collectAt(x, y) {
+  const spots = [[2, 2], [5, 3], [4, 0]];
+  const index = spots.findIndex(([spotX, spotY]) => spotX === x && spotY === y);
+  if (index < 0 || state.collectibles.includes(index)) return;
+  state.collectibles = [...state.collectibles, index];
+  state.cash += 150; state.fame = Math.min(100, state.fame + 2);
+  state.lastDiscovery = '找到港灣印記！獲得 $150 與 2 點名聲。';
 }
 function openMission() { $('missions').scrollIntoView({ behavior: 'smooth' }); }
 function toggleVehicle() {
@@ -142,5 +156,5 @@ window.addEventListener('keydown', (event) => {
   else if ((event.key === 'e' || event.key === 'E') && (state.inCar || Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1)) toggleVehicle();
   else if (event.key === 'Enter' && state.mapX === 6 && state.mapY === 0) openMission();
 });
-$('reset').addEventListener('click', () => { state = { ...initialState }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
+$('reset').addEventListener('click', () => { state = { ...initialState, collectibles: [] }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
 render();
