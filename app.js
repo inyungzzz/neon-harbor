@@ -57,6 +57,9 @@ function renderStats() {
   $('heat').textContent = state.heat === 0 ? '低調' : state.heat < 3 ? '有人注意' : '警方關注';
   $('wanted-stars').textContent = `${'★'.repeat(state.heat)}${'☆'.repeat(5 - state.heat)}`;
   $('cool-down').hidden = state.heat === 0;
+  const atSafehouse = state.mapX === 0 && state.mapY === 4;
+  $('cool-down').disabled = !atSafehouse;
+  $('cool-down').innerHTML = atSafehouse ? '躲避巡查 <span>花 30 分鐘降低 1 級</span>' : '返回港區入口 <span>才能躲避巡查</span>';
   $('collectible-count').textContent = `港灣印記 ✦ ${state.collectibles.length} / 3`;
 }
 function renderGarage() {
@@ -151,7 +154,10 @@ function toggleVehicle() {
   if (state.inCar) state.inCar = false; else if (nearbyCar) state.inCar = true;
   save(); renderMap();
 }
-function coolDown() { if (state.heat > 0) state.heat -= 1; save(); render(); }
+function coolDown() {
+  if (state.heat === 0 || state.mapX !== 0 || state.mapY !== 4) return;
+  state.heat -= 1; advanceTime(30); save(); render();
+}
 function startActivity() {
   if (state.activityActive) return;
   const fee = state.relationships.kui >= 2 ? 0 : 100;
