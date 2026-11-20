@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111713">
+  <meta name="description" content="霓虹港：一座由你的選擇改變的原創城市互動原型。">
+  <title>霓虹港｜城市行動原型</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="霓虹港首頁"><span class="brand-mark">N</span><span>NEON HARBOR<small>城市行動原型</small></span></a>
+    <div class="online"><span></span> 城市連線中</div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">自由城區 · 週五 21:40</p>
+        <h1>每條街，<br><em>都有自己的規矩。</em></h1>
+        <p class="intro">在霓虹港找出自己的路。接案、做選擇，讓整座城市記住你的名字。</p>
+        <a class="primary-link" href="#missions">查看今晚的委託 <span>↓</span></a>
+      </div>
+      <div class="city-art" aria-label="夜色中的原創虛構城市剪影" role="img">
+        <div class="moon"></div><div class="sunset"></div><div class="skyline skyline-back"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="skyline skyline-front"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="road"><span></span></div><div class="city-label">DISTRICT 04 <b>自由港區</b></div>
+      </div>
+    </section>
+
+    <section class="dashboard" aria-label="玩家狀態">
+      <div class="dash-heading"><span>行動檔案</span><span class="save-note" id="save-note">進度自動儲存</span></div>
+      <div class="stats">
+        <article class="stat"><span class="stat-icon">＄</span><div><small>現金</small><strong id="cash">$2,400</strong></div></article>
+        <article class="stat"><span class="stat-icon fame">✦</span><div><small>街頭名聲</small><strong id="fame">12 <small>/ 100</small></strong></div></article>
+        <article class="stat"><span class="stat-icon heat">◉</span><div><small>警方熱度</small><strong id="heat">低調</strong></div></article>
+        <article class="stat district-stat"><span class="stat-icon">⌖</span><div><small>所在區域</small><strong>自由港區</strong></div></article>
+      </div>
+    </section>
+
+    <section class="missions" id="missions">
+      <div class="section-heading"><div><p class="eyebrow">今晚的機會</p><h2>可接委託</h2></div><span class="mission-count">01 / 03</span></div>
+      <article class="mission-card" id="mission-card">
+        <div class="mission-visual"><span class="tag">新委託</span><div class="signal">〰</div><span class="visual-caption">港區 · 舊電車站</span></div>
+        <div class="mission-content">
+          <div class="mission-meta"><span>情報蒐集</span><span>約 5 分鐘</span></div>
+          <h3 id="mission-title">失聯的訊號</h3>
+          <p id="mission-description">修車師傅阿哲的貨車停在舊電車站附近，車上的一袋零件不見了。他想知道發生了什麼，並願意付你一筆跑腿費。</p>
+          <div class="mission-reward"><span>預估報酬</span><strong id="reward">$650 <i>＋名聲</i></strong></div>
+          <div class="choices" id="choices">
+            <button class="choice" data-choice="talk"><span class="choice-key">A</span><span><b>先問附近店家</b><small>低風險 · 可能找到線索</small></span><span class="choice-arrow">↗</span></button>
+            <button class="choice" data-choice="sneak"><span class="choice-key">B</span><span><b>夜裡回現場查看</b><small>中風險 · 可能發現更多</small></span><span class="choice-arrow">↗</span></button>
+          </div>
+          <div class="result" id="result" role="status" aria-live="polite" hidden></div>
+        </div>
+      </article>
+      <div class="locked-missions"><span>▰</span> 完成第一份委託，解鎖更多城市故事</div>
+    </section>
+  </main>
+
+  <footer><span>NEON HARBOR © 2026</span><span>原創互動故事原型 · 版本 0.1</span><button id="reset" type="button">重設進度</button></footer>
+</body>
+</html>
