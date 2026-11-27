@@ -1,3 +1,6 @@
+const saveBackupFormat = 'neon-harbor-save';
+const saveBackupVersion = 1;
+
 function createNeonHarborSaveTools(initialState, missionCount) {
   function normalizeState(value) {
     const saved = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -37,7 +40,19 @@ function createNeonHarborSaveTools(initialState, missionCount) {
     };
   }
 
-  return { normalizeState };
+  function createBackup(value, exportedAt = new Date().toISOString()) {
+    return { format: saveBackupFormat, version: saveBackupVersion, exportedAt, state: normalizeState(value) };
+  }
+
+  function parseBackup(value) {
+    const backup = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!backup || backup.format !== saveBackupFormat || backup.version !== saveBackupVersion || !backup.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) {
+      throw new Error('檔案格式或版本不支援。');
+    }
+    return normalizeState(backup.state);
+  }
+
+  return { normalizeState, createBackup, parseBackup };
 }
 
 if (typeof window !== 'undefined') window.createNeonHarborSaveTools = createNeonHarborSaveTools;

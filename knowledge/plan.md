@@ -74,6 +74,7 @@
 - [x] Pages artifact 名稱包含 workflow 執行次數，避免重跑時舊 artifact 與新 artifact 同名而使部署失敗。
 - [x] 在 Pages 上傳與部署之間等待 artifact metadata 傳播，避免部署步驟過早查詢而回報找不到檔案。
 - [x] 抽出可在瀏覽器與 Node.js 共用的存檔正規化模組，並加入舊版遷移、欄位限制與歷程上限測試。
+- [x] 把備份建立與解析集中至存檔模組，測試匯出匯入往返及錯誤格式／版本拒絕行為。
 
 ### 路線圖項目
 
@@ -109,6 +110,7 @@
 - [x] 以 `github.run_attempt` 隔離 Pages artifact 名稱，確保重試只部署該次上傳的 artifact。
 - [x] 在部署查詢前保留 10 秒 metadata 傳播時間，降低新 artifact 剛完成上傳時的 API 延遲競態。
 - [x] 建立 `node:test` 回歸測試，覆蓋空存檔、舊 `missionHistory` 遷移、邊界值、收藏去重及 50 筆歷程上限。
+- [x] 覆蓋版本化備份往返、無效 JSON、未知格式、不支援版本與錯誤 state 型別。
 
 ## 範圍原則
 

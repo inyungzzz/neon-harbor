@@ -8,7 +8,7 @@ const initialState = {
   inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false,
   collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300,
 };
-const { normalizeState } = createNeonHarborSaveTools(initialState, 4);
+const { normalizeState, createBackup, parseBackup } = createNeonHarborSaveTools(initialState, 4);
 
 test('fills defaults without sharing mutable arrays between saves', () => {
   const first = normalizeState();
@@ -58,4 +58,23 @@ test('drops malformed history entries and falls back from invalid values', () =>
   assert.equal(state.gameMinutes, 1300);
   assert.deepEqual(state.relationships, { zhe: 0, kui: 0 });
   assert.deepEqual(state.actionHistory, []);
+});
+
+test('exports and imports a versioned backup without losing normalized progress', () => {
+  const source = normalizeState({
+    cash: 3800, missionIndex: 2, vehicleUpgrade: true,
+    actionHistory: [{ kind: 'activity', title: '兜風', choice: '穩定路線', result: '完成', time: 515 }],
+  });
+  const backup = createBackup(source, '2026-11-27T00:00:00.000Z');
+  assert.equal(backup.format, 'neon-harbor-save');
+  assert.equal(backup.version, 1);
+  assert.equal(backup.exportedAt, '2026-11-27T00:00:00.000Z');
+  assert.deepEqual(parseBackup(JSON.stringify(backup)), source);
+});
+
+test('rejects invalid JSON, unknown formats, and unsupported backup versions', () => {
+  assert.throws(() => parseBackup('{'), SyntaxError);
+  assert.throws(() => parseBackup({ format: 'other', version: 1, state: {} }), /格式或版本/);
+  assert.throws(() => parseBackup({ format: 'neon-harbor-save', version: 2, state: {} }), /格式或版本/);
+  assert.throws(() => parseBackup({ format: 'neon-harbor-save', version: 1, state: [] }), /格式或版本/);
 });

@@ -1,10 +1,8 @@
 const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', actionHistory: [], mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
-const exportFormat = 'neon-harbor-save';
-const exportVersion = 1;
 const q = (selector) => document.querySelector(selector);
 const missions = window.neonHarborMissions;
-const { normalizeState } = window.createNeonHarborSaveTools(initialState, missions.length);
+const { normalizeState, createBackup, parseBackup } = window.createNeonHarborSaveTools(initialState, missions.length);
 function readState() {
   try { return normalizeState(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
   catch { return normalizeState(); }
@@ -13,7 +11,7 @@ let state = readState();
 const $ = (id) => document.getElementById(id);
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
 function exportSave() {
-  const backup = { format: exportFormat, version: exportVersion, exportedAt: new Date().toISOString(), state };
+  const backup = createBackup(state);
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -25,15 +23,11 @@ function exportSave() {
 }
 async function importSave(file) {
   try {
-    const backup = JSON.parse(await file.text());
-    if (!backup || backup.format !== exportFormat || backup.version !== exportVersion || !backup.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) {
-      throw new Error('檔案格式或版本不支援。');
-    }
+    const importedState = parseBackup(await file.text());
     if (!window.confirm('匯入這份備份會取代目前瀏覽器的遊戲進度，確定繼續嗎？')) {
       $('save-note').textContent = '已取消匯入';
       return;
     }
-    const importedState = normalizeState(backup.state);
     localStorage.setItem(storageKey, JSON.stringify(importedState));
     state = importedState;
     render();
