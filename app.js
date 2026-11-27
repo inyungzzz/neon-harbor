@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', missionHistory: [], mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', actionHistory: [], mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -37,10 +37,13 @@ const missions = [
 ];
 function readState() {
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    const saved = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    const { missionHistory: legacyMissionHistory, ...savedFields } = saved;
     const relationships = saved.relationships || {};
-    const missionHistory = Array.isArray(saved.missionHistory) ? saved.missionHistory.filter((entry) => entry && typeof entry.title === 'string' && typeof entry.choice === 'string' && typeof entry.result === 'string' && Number.isFinite(entry.time)).slice(-50) : [];
-    return { ...initialState, ...saved, missionHistory, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
+    const historySource = Array.isArray(saved.actionHistory) ? saved.actionHistory : legacyMissionHistory;
+    const actionHistory = Array.isArray(historySource) ? historySource.filter((entry) => entry && typeof entry.title === 'string' && typeof entry.choice === 'string' && typeof entry.result === 'string' && Number.isFinite(entry.time) && entry.time >= 0 && entry.time < 1440).map((entry) => ({ ...entry, kind: entry.kind === 'activity' ? 'activity' : 'mission' })).slice(-50) : [];
+    return { ...initialState, ...savedFields, actionHistory, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
   } catch { return { ...initialState }; }
 }
 let state = readState();
@@ -55,14 +58,14 @@ function render() {
 function renderHistory() {
   const list = $('mission-history');
   list.replaceChildren();
-  if (!state.missionHistory.length) {
+  if (!state.actionHistory.length) {
     const empty = document.createElement('li');
     empty.className = 'history-empty';
     empty.textContent = '完成第一份委託後，你的選擇會記錄在這裡。';
     list.append(empty);
     return;
   }
-  [...state.missionHistory].reverse().forEach((entry) => {
+  [...state.actionHistory].reverse().forEach((entry) => {
     const item = document.createElement('li');
     const heading = document.createElement('div');
     heading.className = 'history-heading';
@@ -73,7 +76,7 @@ function renderHistory() {
     heading.append(title, time);
     const choice = document.createElement('p');
     choice.className = 'history-choice';
-    choice.textContent = `你的選擇：${entry.choice}`;
+    choice.textContent = `${entry.kind === 'activity' ? '活動路線' : '你的選擇'}：${entry.choice}`;
     const result = document.createElement('p');
     result.className = 'history-result';
     result.textContent = entry.result;
@@ -228,7 +231,10 @@ function finishActivity(route) {
     state.cash += 500; state.fame = Math.min(100, state.fame + 3); state.heat = Math.min(5, state.heat + 1);
     $('activity-status').textContent = '你從捷徑搶下最佳時間，拿到 $500 獎金與 3 點名聲；警方熱度增加 1 級。';
   }
-  state.activityRuns += 1; state.activityActive = false; advanceTime(15); save(); render();
+  state.activityRuns += 1; state.activityActive = false; advanceTime(15);
+  state.actionHistory.push({ kind: 'activity', title: '港區兜風挑戰', choice: route === 'steady' ? '穩定路線' : '挑戰捷徑', result: route === 'steady' ? '穩定完成一圈，獲得 $260 獎金與 2 點名聲。' : '從捷徑搶下最佳時間，獲得 $500 獎金與 3 點名聲；警方熱度增加 1 級。', time: state.gameMinutes });
+  state.actionHistory = state.actionHistory.slice(-50);
+  save(); render();
 }
 function upgradeVehicle() {
   const cost = state.relationships.zhe >= 2 ? 600 : 900;
@@ -243,8 +249,8 @@ function choose(index) {
   state.completed = true; state.cash += choice.cash; state.fame = Math.min(100, state.fame + choice.fame); state.heat = Math.min(5, state.heat + choice.heat); state.missionResult = choice.result;
   if (choice.relationship && choice.bond) state.relationships[choice.relationship] = Math.min(3, state.relationships[choice.relationship] + choice.bond);
   advanceTime(60);
-  state.missionHistory.push({ title: missions[state.missionIndex].title, choice: choice.title, result: choice.result, time: state.gameMinutes });
-  state.missionHistory = state.missionHistory.slice(-50);
+  state.actionHistory.push({ kind: 'mission', title: missions[state.missionIndex].title, choice: choice.title, result: choice.result, time: state.gameMinutes });
+  state.actionHistory = state.actionHistory.slice(-50);
   save(); render();
 }
 function nextMission() {
@@ -271,7 +277,7 @@ window.addEventListener('keydown', (event) => {
 });
 $('reset').addEventListener('click', () => {
   if (!window.confirm('確定要重設霓虹港進度嗎？現有任務、收藏與行動紀錄都會清除。')) return;
-  state = { ...initialState, collectibles: [], missionHistory: [] };
+  state = { ...initialState, collectibles: [], actionHistory: [] };
   localStorage.removeItem(storageKey);
   render();
   $('save-note').textContent = '進度自動儲存';
