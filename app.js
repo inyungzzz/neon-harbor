@@ -1,5 +1,7 @@
 const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', actionHistory: [], mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
+const exportFormat = 'neon-harbor-save';
+const exportVersion = 1;
 const q = (selector) => document.querySelector(selector);
 const missions = [
   {
@@ -35,20 +37,82 @@ const missions = [
     ],
   },
 ];
+function normalizeState(value) {
+  const saved = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const { missionHistory: legacyMissionHistory, ...savedFields } = saved;
+  const relationships = saved.relationships && typeof saved.relationships === 'object' ? saved.relationships : {};
+  const historySource = Array.isArray(saved.actionHistory) ? saved.actionHistory : legacyMissionHistory;
+  const clampInt = (input, fallback, min, max) => {
+    const number = Number(input);
+    return Number.isFinite(number) ? Math.max(min, Math.min(max, Math.floor(number))) : fallback;
+  };
+  const actionHistory = Array.isArray(historySource) ? historySource
+    .filter((entry) => entry && typeof entry.title === 'string' && typeof entry.choice === 'string' && typeof entry.result === 'string' && Number.isFinite(entry.time) && entry.time >= 0 && entry.time < 1440)
+    .map((entry) => ({ kind: entry.kind === 'activity' ? 'activity' : 'mission', title: entry.title.slice(0, 100), choice: entry.choice.slice(0, 160), result: entry.result.slice(0, 1200), time: Math.floor(entry.time) }))
+    .slice(-50) : [];
+  const collectibles = Array.isArray(saved.collectibles) ? [...new Set(saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3))] : [];
+  const gameMinutes = Number(saved.gameMinutes ?? initialState.gameMinutes);
+  return {
+    ...initialState,
+    ...savedFields,
+    cash: clampInt(saved.cash, initialState.cash, 0, 1000000000),
+    fame: clampInt(saved.fame, initialState.fame, 0, 100),
+    heat: clampInt(saved.heat, initialState.heat, 0, 5),
+    completed: saved.completed === true,
+    missionAccepted: saved.missionAccepted === true,
+    missionIndex: clampInt(saved.missionIndex, 0, 0, missions.length - 1),
+    missionResult: typeof saved.missionResult === 'string' ? saved.missionResult.slice(0, 1200) : '',
+    actionHistory,
+    mapX: clampInt(saved.mapX, initialState.mapX, 0, 6),
+    mapY: clampInt(saved.mapY, initialState.mapY, 0, 4),
+    inCar: saved.inCar === true,
+    vehicleUpgrade: saved.vehicleUpgrade === true,
+    activityRuns: clampInt(saved.activityRuns, 0, 0, 1000000000),
+    activityActive: saved.activityActive === true,
+    collectibles,
+    relationships: { zhe: clampInt(relationships.zhe, 0, 0, 3), kui: clampInt(relationships.kui, 0, 0, 3) },
+    gameMinutes: Number.isFinite(gameMinutes) ? ((Math.floor(gameMinutes) % 1440) + 1440) % 1440 : initialState.gameMinutes,
+  };
+}
 function readState() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    const saved = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
-    const { missionHistory: legacyMissionHistory, ...savedFields } = saved;
-    const relationships = saved.relationships || {};
-    const historySource = Array.isArray(saved.actionHistory) ? saved.actionHistory : legacyMissionHistory;
-    const actionHistory = Array.isArray(historySource) ? historySource.filter((entry) => entry && typeof entry.title === 'string' && typeof entry.choice === 'string' && typeof entry.result === 'string' && Number.isFinite(entry.time) && entry.time >= 0 && entry.time < 1440).map((entry) => ({ ...entry, kind: entry.kind === 'activity' ? 'activity' : 'mission' })).slice(-50) : [];
-    return { ...initialState, ...savedFields, actionHistory, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
-  } catch { return { ...initialState }; }
+  try { return normalizeState(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
+  catch { return normalizeState(); }
 }
 let state = readState();
 const $ = (id) => document.getElementById(id);
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
+function exportSave() {
+  const backup = { format: exportFormat, version: exportVersion, exportedAt: new Date().toISOString(), state };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `neon-harbor-save-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  $('save-note').textContent = '備份已下載';
+}
+async function importSave(file) {
+  try {
+    const backup = JSON.parse(await file.text());
+    if (!backup || backup.format !== exportFormat || backup.version !== exportVersion || !backup.state || typeof backup.state !== 'object' || Array.isArray(backup.state)) {
+      throw new Error('檔案格式或版本不支援。');
+    }
+    if (!window.confirm('匯入這份備份會取代目前瀏覽器的遊戲進度，確定繼續嗎？')) {
+      $('save-note').textContent = '已取消匯入';
+      return;
+    }
+    const importedState = normalizeState(backup.state);
+    localStorage.setItem(storageKey, JSON.stringify(importedState));
+    state = importedState;
+    render();
+    $('save-note').textContent = '備份已匯入';
+  } catch (error) {
+    $('save-note').textContent = `匯入失敗：${error instanceof SyntaxError ? 'JSON 檔案無法解析。' : error.message}`;
+  } finally {
+    $('import-save-file').value = '';
+  }
+}
 function render() {
   renderClock();
   renderStats(); renderConnections();
@@ -61,7 +125,7 @@ function renderHistory() {
   if (!state.actionHistory.length) {
     const empty = document.createElement('li');
     empty.className = 'history-empty';
-    empty.textContent = '完成第一份委託後，你的選擇會記錄在這裡。';
+    empty.textContent = '完成委託或兜風挑戰後，行動紀錄會顯示在這裡。';
     list.append(empty);
     return;
   }
@@ -267,6 +331,9 @@ $('next-mission').addEventListener('click', nextMission);
 $('activity-start').addEventListener('click', startActivity);
 $('activity-choices').addEventListener('click', (event) => { const button = event.target.closest('.activity-choice'); if (button) finishActivity(button.dataset.ride); });
 $('upgrade-vehicle').addEventListener('click', upgradeVehicle);
+$('export-save').addEventListener('click', exportSave);
+$('import-save-trigger').addEventListener('click', () => $('import-save-file').click());
+$('import-save-file').addEventListener('change', (event) => { const file = event.target.files?.[0]; if (file) importSave(file); });
 window.addEventListener('keydown', (event) => {
   const activeTag = document.activeElement?.tagName;
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
