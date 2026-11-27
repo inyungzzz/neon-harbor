@@ -3,6 +3,7 @@ const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = window.neonHarborMissions;
 const { normalizeState, createBackup, parseBackup } = window.createNeonHarborSaveTools(initialState, missions.length);
+const traceGridMove = window.traceNeonHarborGridMove;
 function readState() {
   try { return normalizeState(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
   catch { return normalizeState(); }
@@ -168,15 +169,11 @@ function renderMap() {
   $('interact').innerHTML = `${state.missionAccepted ? '查看委託' : '接取委託'} <span>Enter</span>`;
 }
 function move(direction) {
-  const delta = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[direction];
-  if (!delta) return;
   const speed = state.inCar ? (state.vehicleUpgrade ? 3 : 2) : 1;
-  for (let step = 0; step < speed; step += 1) {
-    state.mapX = Math.max(0, Math.min(6, state.mapX + delta[0]));
-    state.mapY = Math.max(0, Math.min(4, state.mapY + delta[1]));
-    collectAt(state.mapX, state.mapY);
-  }
-  advanceTime(speed * 5);
+  const path = traceGridMove(state.mapX, state.mapY, direction, speed);
+  if (!path.length) { $('walk-hint').textContent = '這個方向已經沒有可走的街道。'; return; }
+  path.forEach(({ x, y }) => { state.mapX = x; state.mapY = y; collectAt(x, y); });
+  advanceTime(path.length * 5);
   renderClock();
   renderStats(); renderMap(); save();
 }
