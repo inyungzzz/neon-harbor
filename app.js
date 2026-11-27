@@ -1,4 +1,4 @@
-const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
+const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false, missionIndex: 0, missionResult: '', missionHistory: [], mapX: 0, mapY: 4, inCar: false, vehicleUpgrade: false, activityRuns: 0, activityActive: false, collectibles: [], relationships: { zhe: 0, kui: 0 }, gameMinutes: 1300 };
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = [
@@ -31,7 +31,8 @@ function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
     const relationships = saved.relationships || {};
-    return { ...initialState, ...saved, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
+    const missionHistory = Array.isArray(saved.missionHistory) ? saved.missionHistory.filter((entry) => entry && typeof entry.title === 'string' && typeof entry.choice === 'string' && typeof entry.result === 'string' && Number.isFinite(entry.time)).slice(-50) : [];
+    return { ...initialState, ...saved, missionHistory, relationships: { zhe: Math.max(0, Math.min(3, Number(relationships.zhe) || 0)), kui: Math.max(0, Math.min(3, Number(relationships.kui) || 0)) }, collectibles: Array.isArray(saved.collectibles) ? saved.collectibles.filter((id) => Number.isInteger(id) && id >= 0 && id < 3) : [], missionIndex: Math.max(0, Math.min(missions.length - 1, Number(saved.missionIndex) || 0)), heat: Math.max(0, Math.min(5, Number(saved.heat) || 0)), gameMinutes: ((Number(saved.gameMinutes ?? initialState.gameMinutes) || 0) % 1440 + 1440) % 1440 };
   } catch { return { ...initialState }; }
 }
 let state = readState();
@@ -41,6 +42,36 @@ function render() {
   renderClock();
   renderStats(); renderConnections();
   renderMap(); renderMission(); renderActivity(); renderGarage();
+  renderHistory();
+}
+function renderHistory() {
+  const list = $('mission-history');
+  list.replaceChildren();
+  if (!state.missionHistory.length) {
+    const empty = document.createElement('li');
+    empty.className = 'history-empty';
+    empty.textContent = '完成第一份委託後，你的選擇會記錄在這裡。';
+    list.append(empty);
+    return;
+  }
+  [...state.missionHistory].reverse().forEach((entry) => {
+    const item = document.createElement('li');
+    const heading = document.createElement('div');
+    heading.className = 'history-heading';
+    const title = document.createElement('strong');
+    title.textContent = entry.title;
+    const time = document.createElement('time');
+    time.textContent = `${String(Math.floor(entry.time / 60)).padStart(2, '0')}:${String(entry.time % 60).padStart(2, '0')}`;
+    heading.append(title, time);
+    const choice = document.createElement('p');
+    choice.className = 'history-choice';
+    choice.textContent = `你的選擇：${entry.choice}`;
+    const result = document.createElement('p');
+    result.className = 'history-result';
+    result.textContent = entry.result;
+    item.append(heading, choice, result);
+    list.append(item);
+  });
 }
 function renderClock() {
   const hour = Math.floor(state.gameMinutes / 60);
@@ -190,6 +221,8 @@ function choose(index) {
   state.completed = true; state.cash += choice.cash; state.fame = Math.min(100, state.fame + choice.fame); state.heat = Math.min(5, state.heat + choice.heat); state.missionResult = choice.result;
   if (choice.relationship && choice.bond) state.relationships[choice.relationship] = Math.min(3, state.relationships[choice.relationship] + choice.bond);
   advanceTime(60);
+  state.missionHistory.push({ title: missions[state.missionIndex].title, choice: choice.title, result: choice.result, time: state.gameMinutes });
+  state.missionHistory = state.missionHistory.slice(-50);
   save(); render();
 }
 function nextMission() {
@@ -214,5 +247,5 @@ window.addEventListener('keydown', (event) => {
   else if ((event.key === 'e' || event.key === 'E') && (state.inCar || Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1)) toggleVehicle();
   else if (event.key === 'Enter') openMission();
 });
-$('reset').addEventListener('click', () => { state = { ...initialState, collectibles: [] }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
+$('reset').addEventListener('click', () => { state = { ...initialState, collectibles: [], missionHistory: [] }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
 render();
