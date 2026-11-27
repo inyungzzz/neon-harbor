@@ -1,6 +1,6 @@
 # 霓虹港｜城市行動原型
 
-一款原創的開放世界城市互動故事 Web 原型。純 HTML、CSS 與 JavaScript，無需建置工具，可直接在瀏覽器開啟 `index.html`。
+一款原創的開放世界城市互動故事 Web 原型。純 HTML、CSS 與 JavaScript，無需建置工具，可直接在瀏覽器開啟 `index.html`。主線委託資料集中於 `missions.js`，互動與存檔邏輯位於 `app.js`。
 
 ## 本機預覽
 
