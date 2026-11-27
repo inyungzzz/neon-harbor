@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createNeonHarborSaveTools } = require('../save-state.js');
+const { createNeonHarborSaveTools, tryWriteNeonHarborState, tryRemoveNeonHarborState } = require('../save-state.js');
 
 const initialState = {
   cash: 2400, fame: 12, heat: 0, completed: false, missionAccepted: false,
@@ -17,6 +17,19 @@ test('fills defaults without sharing mutable arrays between saves', () => {
   assert.deepEqual(first.actionHistory, []);
   assert.notStrictEqual(first.actionHistory, second.actionHistory);
   assert.notStrictEqual(first.collectibles, second.collectibles);
+});
+
+test('reports storage write and removal failures without throwing', () => {
+  const unavailable = () => { throw new Error('storage denied'); };
+  assert.equal(tryWriteNeonHarborState(unavailable, 'save', { cash: 1 }), false);
+  assert.equal(tryRemoveNeonHarborState(unavailable, 'save'), false);
+
+  const values = new Map();
+  const storage = { setItem: (key, value) => values.set(key, value), removeItem: (key) => values.delete(key) };
+  assert.equal(tryWriteNeonHarborState(() => storage, 'save', { cash: 1 }), true);
+  assert.equal(values.get('save'), '{"cash":1}');
+  assert.equal(tryRemoveNeonHarborState(() => storage, 'save'), true);
+  assert.equal(values.has('save'), false);
 });
 
 test('migrates legacy mission history and clamps saved values', () => {

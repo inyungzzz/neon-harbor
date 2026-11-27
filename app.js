@@ -2,7 +2,7 @@ const initialState = { cash: 2400, fame: 12, heat: 0, completed: false, missionA
 const storageKey = 'neon-harbor-save-v1';
 const q = (selector) => document.querySelector(selector);
 const missions = window.neonHarborMissions;
-const { normalizeState, createBackup, parseBackup } = window.createNeonHarborSaveTools(initialState, missions.length);
+const { normalizeState, createBackup, parseBackup, tryWriteNeonHarborState, tryRemoveNeonHarborState } = window.createNeonHarborSaveTools(initialState, missions.length);
 const traceGridMove = window.traceNeonHarborGridMove;
 const getMoveSteps = window.getNeonHarborMoveSteps;
 function readState() {
@@ -11,7 +11,10 @@ function readState() {
 }
 let state = readState();
 const $ = (id) => document.getElementById(id);
-function save() { localStorage.setItem(storageKey, JSON.stringify(state)); $('save-note').textContent = '進度已儲存'; }
+function save() {
+  const saved = tryWriteNeonHarborState(() => localStorage, storageKey, state);
+  $('save-note').textContent = saved ? '進度已儲存' : '儲存失敗：請匯出備份並檢查瀏覽器儲存空間';
+}
 function exportSave() {
   const backup = createBackup(state);
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -30,7 +33,7 @@ async function importSave(file) {
       $('save-note').textContent = '已取消匯入';
       return;
     }
-    localStorage.setItem(storageKey, JSON.stringify(importedState));
+    if (!tryWriteNeonHarborState(() => localStorage, storageKey, importedState)) throw new Error('瀏覽器無法儲存匯入進度，原有進度未變更。');
     state = importedState;
     render();
     $('save-note').textContent = '備份已匯入';
@@ -271,8 +274,11 @@ window.addEventListener('keydown', (event) => {
 });
 $('reset').addEventListener('click', () => {
   if (!window.confirm('確定要重設霓虹港進度嗎？現有任務、收藏與行動紀錄都會清除。')) return;
+  if (!tryRemoveNeonHarborState(() => localStorage, storageKey)) {
+    $('save-note').textContent = '無法清除存檔：請檢查瀏覽器儲存權限';
+    return;
+  }
   state = { ...initialState, collectibles: [], actionHistory: [] };
-  localStorage.removeItem(storageKey);
   render();
   $('save-note').textContent = '進度自動儲存';
 });

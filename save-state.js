@@ -1,6 +1,24 @@
 const saveBackupFormat = 'neon-harbor-save';
 const saveBackupVersion = 1;
 
+function tryWriteNeonHarborState(getStorage, key, value) {
+  try {
+    getStorage().setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryRemoveNeonHarborState(getStorage, key) {
+  try {
+    getStorage().removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function createNeonHarborSaveTools(initialState, missionCount) {
   function normalizeState(value) {
     const saved = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -52,8 +70,8 @@ function createNeonHarborSaveTools(initialState, missionCount) {
     return normalizeState(backup.state);
   }
 
-  return { normalizeState, createBackup, parseBackup };
+  return { normalizeState, createBackup, parseBackup, tryWriteNeonHarborState, tryRemoveNeonHarborState };
 }
 
 if (typeof window !== 'undefined') window.createNeonHarborSaveTools = createNeonHarborSaveTools;
-if (typeof module !== 'undefined' && module.exports) module.exports = { createNeonHarborSaveTools };
+if (typeof module !== 'undefined' && module.exports) module.exports = { createNeonHarborSaveTools, tryWriteNeonHarborState, tryRemoveNeonHarborState };
