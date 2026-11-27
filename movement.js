@@ -16,5 +16,11 @@ function traceNeonHarborGridMove(startX, startY, direction, steps, maxX = 6, max
   return path;
 }
 
+function getNeonHarborMoveSteps(inCar, vehicleUpgrade) {
+  if (!inCar) return 1;
+  return vehicleUpgrade ? 2 : 1;
+}
+
 if (typeof window !== 'undefined') window.traceNeonHarborGridMove = traceNeonHarborGridMove;
-if (typeof module !== 'undefined' && module.exports) module.exports = { traceNeonHarborGridMove };
+if (typeof window !== 'undefined') window.getNeonHarborMoveSteps = getNeonHarborMoveSteps;
+if (typeof module !== 'undefined' && module.exports) module.exports = { traceNeonHarborGridMove, getNeonHarborMoveSteps };

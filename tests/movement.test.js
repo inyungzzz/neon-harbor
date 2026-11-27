@@ -1,6 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { traceNeonHarborGridMove } = require('../movement.js');
+const { traceNeonHarborGridMove, getNeonHarborMoveSteps } = require('../movement.js');
+
+test('keeps vehicle movement precise while preserving a modest upgrade benefit', () => {
+  assert.equal(getNeonHarborMoveSteps(false, false), 1);
+  assert.equal(getNeonHarborMoveSteps(true, false), 1);
+  assert.equal(getNeonHarborMoveSteps(true, true), 2);
+});
 
 test('traces each traversed cell for walking and vehicle movement', () => {
   assert.deepEqual(traceNeonHarborGridMove(1, 4, 'right', 1), [{ x: 2, y: 4 }]);

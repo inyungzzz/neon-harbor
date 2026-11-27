@@ -4,6 +4,7 @@ const q = (selector) => document.querySelector(selector);
 const missions = window.neonHarborMissions;
 const { normalizeState, createBackup, parseBackup } = window.createNeonHarborSaveTools(initialState, missions.length);
 const traceGridMove = window.traceNeonHarborGridMove;
+const getMoveSteps = window.getNeonHarborMoveSteps;
 function readState() {
   try { return normalizeState(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
   catch { return normalizeState(); }
@@ -97,7 +98,7 @@ function renderStats() {
 function renderGarage() {
   const installed = Boolean(state.vehicleUpgrade);
   const cost = state.relationships.zhe >= 2 ? 600 : 900;
-  $('garage-status').textContent = installed ? '引擎調校已安裝，駕駛時每次可移動 3 格。' : `花費 $${cost} 調整車輛，駕駛時每次可多移動一格。`;
+  $('garage-status').textContent = installed ? '引擎調校已安裝，駕駛時每次可移動 2 格。' : `花費 $${cost} 調整車輛，駕駛時每次可多移動一格。`;
   $('upgrade-vehicle').textContent = installed ? '已安裝 ✓' : `安裝調校 · $${cost}`;
   $('upgrade-vehicle').disabled = installed || state.cash < cost;
 }
@@ -155,7 +156,7 @@ function renderMap() {
   const nearbyCar = Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1;
   $('parked-car').hidden = state.inCar || !nearbyCar;
   [0, 1, 2].forEach((id) => { $(`collectible-${id}`).hidden = state.collectibles.includes(id); });
-  $('vehicle-status').textContent = state.inCar ? `🚘 駕駛中 · 每次移動 ${state.vehicleUpgrade ? 3 : 2} 格` : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
+  $('vehicle-status').textContent = state.inCar ? `🚘 駕駛中 · 每次移動 ${getMoveSteps(true, state.vehicleUpgrade)} 格` : nearbyCar ? '🚘 車輛就在旁邊，按 E 上車' : '🚘 回到起點附近可以找到車輛';
   $('vehicle-toggle').textContent = state.inCar ? '下車（E）' : nearbyCar ? '上車（E）' : '附近沒有車';
   $('vehicle-toggle').disabled = !state.inCar && !nearbyCar;
   const destination = missions[state.missionIndex].destination;
@@ -169,7 +170,7 @@ function renderMap() {
   $('interact').innerHTML = `${state.missionAccepted ? '查看委託' : '接取委託'} <span>Enter</span>`;
 }
 function move(direction) {
-  const speed = state.inCar ? (state.vehicleUpgrade ? 3 : 2) : 1;
+  const speed = getMoveSteps(state.inCar, state.vehicleUpgrade);
   const path = traceGridMove(state.mapX, state.mapY, direction, speed);
   if (!path.length) { $('walk-hint').textContent = '這個方向已經沒有可走的街道。'; return; }
   path.forEach(({ x, y }) => { state.mapX = x; state.mapY = y; collectAt(x, y); });
