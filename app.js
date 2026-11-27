@@ -26,6 +26,14 @@ const missions = [
       { title: '挑戰極限路線', detail: '高報酬 · 警方熱度 +2', cash: 950, fame: 9, heat: 2, relationship: 'kui', bond: 1, result: '你刷新了當晚紀錄，但高架橋附近的巡邏隊也注意到了這場賽事。' },
     ],
   },
+  {
+    title: '河岸燈火', type: '街區協力', duration: '約 4 分鐘', place: '河岸市集 · 外環', destination: [3, 1],
+    description: '河岸市集的臨時照明突然熄滅，幾個攤位還沒收完。小葵認得這裡的店家，阿哲則有一組備用電源；你得在夜色加深前選一種方式幫忙。',
+    choices: [
+      { title: '協調攤商輪流照明', detail: '低風險 · 小葵信任 +1', cash: 560, fame: 6, heat: 0, relationship: 'kui', bond: 1, result: '店家們分出燈具照亮外環，收攤的人潮也順利散去。小葵把你介紹給更多河岸熟面孔。' },
+      { title: '接上車庫備用電源', detail: '較高報酬 · 阿哲信任 +1、熱度 +1', cash: 880, fame: 8, heat: 1, relationship: 'zhe', bond: 1, result: '備用電源讓整排攤位重新亮起來。臨時拉線驚動巡邏隊，但阿哲記下了你解決麻煩的手腕。' },
+    ],
+  },
 ];
 function readState() {
   try {
@@ -130,6 +138,11 @@ function renderMission() {
   $('result').textContent = state.completed ? state.missionResult || '委託已完成。' : '';
   $('next-mission').hidden = !state.completed || state.missionIndex >= missions.length - 1;
   if (state.completed && state.missionIndex === missions.length - 1) $('result').textContent += ' 這是目前故事章節的最後一份委託。';
+  const chapterStatus = $('chapter-status');
+  if (state.completed && state.missionIndex === missions.length - 1) chapterStatus.textContent = '本章委託已全部完成，你的每個選擇都保存在行動檔案。';
+  else if (state.completed) chapterStatus.textContent = '新委託已解鎖。整理好後前往新的地圖標記接案。';
+  else if (state.missionIndex > 0) chapterStatus.textContent = '主線委託已解鎖，前往地圖上的新標記接案。';
+  else chapterStatus.textContent = '完成第一份委託，解鎖更多城市故事。';
   q('.mission-visual .visual-caption').textContent = mission.place;
   q('.mission-visual .tag').textContent = state.completed ? '已完成' : '新委託';
 }
