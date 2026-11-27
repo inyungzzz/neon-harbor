@@ -137,7 +137,9 @@ function renderMission() {
   $('result').hidden = !state.completed;
   $('result').textContent = state.completed ? state.missionResult || '委託已完成。' : '';
   $('next-mission').hidden = !state.completed || state.missionIndex >= missions.length - 1;
-  if (state.completed && state.missionIndex === missions.length - 1) $('result').textContent += ' 這是目前故事章節的最後一份委託。';
+  if (state.completed && state.missionIndex === missions.length - 1) {
+    $('result').textContent += `\n\n章節回響：${getChapterEpilogue()}`;
+  }
   const chapterStatus = $('chapter-status');
   if (state.completed && state.missionIndex === missions.length - 1) chapterStatus.textContent = '本章委託已全部完成，你的每個選擇都保存在行動檔案。';
   else if (state.completed) chapterStatus.textContent = '新委託已解鎖。整理好後前往新的地圖標記接案。';
@@ -145,6 +147,13 @@ function renderMission() {
   else chapterStatus.textContent = '完成第一份委託，解鎖更多城市故事。';
   q('.mission-visual .visual-caption').textContent = mission.place;
   q('.mission-visual .tag').textContent = state.completed ? '已完成' : '新委託';
+}
+function getChapterEpilogue() {
+  if (state.heat >= 3) return '巡邏線仍留意著港區。街坊記得你幫忙的方式，接下來得先想好怎麼低調行動。';
+  if (state.relationships.zhe >= 2 && state.relationships.kui >= 2) return '阿哲的車庫與小葵的河岸人脈都向你敞開，這座港口開始把你當自己人。';
+  if (state.relationships.zhe >= 2) return '阿哲把車庫當成你的落腳點；熟悉的引擎聲，成了你在港區的後盾。';
+  if (state.relationships.kui >= 2) return '小葵把你介紹給河岸攤商；往後走進市集，會有人認得你的面孔。';
+  return '市集恢復平靜。這趟奔走替你在自由港區留下第一個名聲。';
 }
 function renderMap() {
   const player = $('player');
