@@ -269,5 +269,11 @@ window.addEventListener('keydown', (event) => {
   else if ((event.key === 'e' || event.key === 'E') && (state.inCar || Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1)) toggleVehicle();
   else if (event.key === 'Enter') openMission();
 });
-$('reset').addEventListener('click', () => { state = { ...initialState, collectibles: [], missionHistory: [] }; localStorage.removeItem(storageKey); render(); $('save-note').textContent = '進度自動儲存'; });
+$('reset').addEventListener('click', () => {
+  if (!window.confirm('確定要重設霓虹港進度嗎？現有任務、收藏與行動紀錄都會清除。')) return;
+  state = { ...initialState, collectibles: [], missionHistory: [] };
+  localStorage.removeItem(storageKey);
+  render();
+  $('save-note').textContent = '進度自動儲存';
+});
 render();
