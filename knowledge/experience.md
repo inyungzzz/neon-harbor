@@ -107,3 +107,9 @@
 - **經驗：** GitHub Pages 必須先啟用並指定 GitHub Actions 為來源，之後部署工作流程的 `configure-pages` 才能取得 Pages 設定。若 workflow 在 Pages 啟用前觸發，第一次執行可能因找不到 Pages site 而失敗；啟用後重跑即可。
 - **本次使用：** 先建立公開儲存庫並推送，再以 Pages API 設定 `build_type: workflow`，最後重新觸發 Actions 並確認網站回應。
 - **未來適用範圍：** 適用於新 GitHub 儲存庫第一次設定 Pages；後續只需推送 `main`，不必重複設定。若上傳 artifact 成功但 deploy step 找不到 artifact，先查 Actions 執行紀錄並重跑，以區分暫時性服務問題與 workflow 設定錯誤。
+
+## 為 Pages 重跑使用不同 artifact 名稱
+
+- **經驗：** Pages 部署首次因 artifact metadata 暫時查不到剛上傳的檔案而失敗時，同一 run 的工作重跑會保留前次 artifact。若每次都沿用 `github-pages` 名稱，第二次部署就可能找到兩份同名 artifact。將 artifact 名稱加上 `github.run_attempt`，並讓上傳與部署步驟使用同一名稱，可讓重跑明確選取當次產物。
+- **本次使用：** workflow 使用 `github-pages-${{ github.run_attempt }}` 作為上傳與部署名稱；部署紀錄驗證了第一次重跑的重名原因，接著由新 workflow run 使用 attempt 1 的獨立 artifact。
+- **未來適用範圍：** 適用於同一 GitHub Actions run 可能重跑、且 action 依名稱尋找 artifact 的部署工作流程。若 workflow 改用多個 artifact 輸入，還需同時檢查每次 attempt 的 artifact 清理與選擇規則。
