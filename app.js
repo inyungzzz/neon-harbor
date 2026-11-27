@@ -5,6 +5,7 @@ const missions = window.neonHarborMissions;
 const { normalizeState, createBackup, parseBackup, tryWriteNeonHarborState, tryRemoveNeonHarborState } = window.createNeonHarborSaveTools(initialState, missions.length);
 const traceGridMove = window.traceNeonHarborGridMove;
 const getMoveSteps = window.getNeonHarborMoveSteps;
+const getActivityFee = window.getNeonHarborActivityFee;
 function readState() {
   try { return normalizeState(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
   catch { return normalizeState(); }
@@ -114,10 +115,11 @@ function renderConnections() {
   }
 }
 function renderActivity() {
-  const fee = state.relationships.kui >= 2 ? 0 : 100;
+  const fee = getActivityFee(state.relationships.kui);
   $('activity-count').textContent = `已完成 ${state.activityRuns} 次`;
   $('activity-start').disabled = state.activityActive;
   $('activity-start').textContent = state.activityActive ? '挑選路線中…' : `${state.activityRuns ? '再玩一次' : '開始挑戰'}（${fee ? '$100' : '免費'}）`;
+  q('.activity-fee').textContent = fee ? '報名費 $100' : '小葵支援 · 免費';
   $('activity-choices').hidden = !state.activityActive;
 }
 function renderMission() {
@@ -206,7 +208,7 @@ function coolDown() {
 }
 function startActivity() {
   if (state.activityActive) return;
-  const fee = state.relationships.kui >= 2 ? 0 : 100;
+  const fee = getActivityFee(state.relationships.kui);
   if (state.cash < fee) { $('activity-status').textContent = '現金不足，至少需要 $100 報名費。'; return; }
   state.cash -= fee; state.activityActive = true;
   $('activity-status').textContent = fee ? '路線已準備好，選擇一種方式完成挑戰。' : '小葵幫你免除報名費，選擇一種方式完成挑戰。';
