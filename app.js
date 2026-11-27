@@ -262,7 +262,7 @@ window.addEventListener('keydown', (event) => {
   const keyMap = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
   if (keyMap[event.key]) { event.preventDefault(); move(keyMap[event.key]); }
   else if ((event.key === 'e' || event.key === 'E') && (state.inCar || Math.abs(state.mapX - 1) + Math.abs(state.mapY - 4) <= 1)) toggleVehicle();
-  else if (event.key === 'Enter') openMission();
+  else if (event.key === 'Enter' && window.shouldOpenMissionFromEnter(activeTag, document.activeElement?.isContentEditable)) openMission();
 });
 $('reset').addEventListener('click', () => {
   if (!window.confirm('確定要重設霓虹港進度嗎？現有任務、收藏與行動紀錄都會清除。')) return;
