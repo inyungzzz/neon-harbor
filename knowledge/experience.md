@@ -113,3 +113,9 @@
 - **經驗：** Pages 部署首次因 artifact metadata 暫時查不到剛上傳的檔案而失敗時，同一 run 的工作重跑會保留前次 artifact。若每次都沿用 `github-pages` 名稱，第二次部署就可能找到兩份同名 artifact。將 artifact 名稱加上 `github.run_attempt`，並讓上傳與部署步驟使用同一名稱，可讓重跑明確選取當次產物。
 - **本次使用：** workflow 使用 `github-pages-${{ github.run_attempt }}` 作為上傳與部署名稱；部署紀錄驗證了第一次重跑的重名原因，接著由新 workflow run 使用 attempt 1 的獨立 artifact。
 - **未來適用範圍：** 適用於同一 GitHub Actions run 可能重跑、且 action 依名稱尋找 artifact 的部署工作流程。若 workflow 改用多個 artifact 輸入，還需同時檢查每次 attempt 的 artifact 清理與選擇規則。
+
+## 等 Pages artifact metadata 可查詢後再部署
+
+- **經驗：** 即使上傳步驟回報完成，GitHub Actions artifact metadata 也可能短暫尚未出現在部署 action 的查詢結果。若 deploy-pages 緊接在上傳後立即查詢，log 會顯示 0 artifacts；等候短暫傳播時間可避開這個服務端競態，並應搭配每次嘗試獨立的 artifact 名稱。
+- **本次使用：** 兩次部署 log 都顯示上傳成功後不到一秒就查詢且回傳 0；在 Pages workflow 加入 10 秒等待步驟，並用 `github.run_attempt` 區分重跑產物。
+- **未來適用範圍：** 適用於同一 workflow 內上傳後立即透過 API 查找 artifact 的發布流程。等待是針對已觀察到的傳播延遲，不取代檢查 artifact 名稱、run ID 與上傳步驟的設定。

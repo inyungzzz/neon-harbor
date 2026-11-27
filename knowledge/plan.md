@@ -72,6 +72,7 @@
 - [x] 加入版本化 JSON 存檔匯出／匯入，並在取代現有進度前確認與正規化資料欄位。
 - [x] 將四份主線委託抽至獨立的靜態資料模組，維持原生瀏覽器載入、不新增建置步驟。
 - [x] Pages artifact 名稱包含 workflow 執行次數，避免重跑時舊 artifact 與新 artifact 同名而使部署失敗。
+- [x] 在 Pages 上傳與部署之間等待 artifact metadata 傳播，避免部署步驟過早查詢而回報找不到檔案。
 
 ### 路線圖項目
 
@@ -105,6 +106,7 @@
 - [x] 支援下載存檔備份和跨瀏覽器還原；匯入使用共用狀態正規化並保留舊版任務歷程遷移。
 - [x] 讓任務內容集中於 `missions.js`，並在 HTML 中先載入任務資料再載入遊戲邏輯。
 - [x] 以 `github.run_attempt` 隔離 Pages artifact 名稱，確保重試只部署該次上傳的 artifact。
+- [x] 在部署查詢前保留 10 秒 metadata 傳播時間，降低新 artifact 剛完成上傳時的 API 延遲競態。
 
 ## 範圍原則
 
